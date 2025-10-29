@@ -1,0 +1,104 @@
+{
+  "name": "PowerBI WhatsApp Automation",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Trigger - Every Day 10am",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [300, 300],
+      "parameters": {
+        "triggerTimes": [
+          {
+            "hour": 10,
+            "minute": 0,
+            "weekday": "*"
+          }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Run Puppeteer Script",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [600, 300],
+      "parameters": {
+        "command": "curl -s -o /tmp/powerbi_screenshot.js \"https://raw.githubusercontent.com/albert-loh/n8n-powerbi-automation/main/powerbi_screenshot.js\" && node /tmp/powerbi_screenshot.js"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Upload Screenshot to transfer.sh",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "parameters": {
+        "url": "https://transfer.sh/r2p_screenshot.png",
+        "method": "POST",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Send WhatsApp via Twilio",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1200, 300],
+      "credentials": {
+        "twilioApi": {
+          "id": "Twilio_Account",
+          "name": "Twilio Account"
+        }
+      },
+      "parameters": {
+        "from": "={{$env.TWILIO_FROM}}",
+        "to": "whatsapp:+60129168900",
+        "message": "📊 PowerBI Report Screenshot for yesterday is ready!",
+        "mediaUrl": "={{$json[\"data\"]}}"
+      }
+    }
+  ],
+  "connections": {
+    "Trigger - Every Day 10am": {
+      "main": [
+        [
+          {
+            "node": "Run Puppeteer Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Puppeteer Script": {
+      "main": [
+        [
+          {
+            "node": "Upload Screenshot to transfer.sh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Screenshot to transfer.sh": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp via Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kuala_Lumpur"
+  },
+  "tags": ["PowerBI", "Twilio", "WhatsApp", "Automation"]
+}
+
